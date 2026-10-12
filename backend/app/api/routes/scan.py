@@ -169,12 +169,12 @@ async def submit_scan(req: ScanRequest):
     queue = asyncio.Queue()
     sse_queues[scan_id] = queue
 
-    # Run background scan task
-    asyncio.create_task(run_scan_pipeline(scan_id, req.type, req.content))
+    # Execute scan pipeline to ensure persistence in serverless environments
+    await run_scan_pipeline(scan_id, req.type, req.content)
 
     return ScanQueuedResponse(
         scan_id=scan_id,
-        status="queued",
+        status="ready",
         stream_url=f"/api/scan/stream/{scan_id}"
     )
 
