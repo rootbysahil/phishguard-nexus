@@ -95,14 +95,11 @@ async def root_index(request: Request):
 
 @app.middleware("http")
 async def vercel_path_rewrite_middleware(request: Request, call_next):
-    matched = (
-        request.headers.get("x-matched-path")
-        or request.headers.get("x-forwarded-uri")
-        or request.headers.get("x-rewrite-url")
-    )
-    if matched:
-        clean_path = matched.split("?")[0]
-        if clean_path and not clean_path.startswith("/api/index"):
+    # Extract path forwarded by Vercel rewrite (?path=/$1)
+    target_path = request.query_params.get("path")
+    if target_path:
+        clean_path = "/" + target_path.lstrip("/")
+        if clean_path and clean_path != "/api/index":
             request.scope["path"] = clean_path
     response = await call_next(request)
     return response
