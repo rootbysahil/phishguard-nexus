@@ -50,6 +50,7 @@ backend/data/raw/*
 backend/data/processed/*
 !backend/data/processed/.gitkeep
 models/*.joblib
+!models/best_model.joblib
 backend/models/*.joblib
 !backend/models/.gitkeep
 

@@ -41,11 +41,16 @@ app.add_middleware(
 )
 
 # Mount Static Evaluation Artifacts
-eval_dir = Path("models/eval")
+project_root = Path(__file__).resolve().parent.parent.parent
+eval_dir = project_root / "models" / "eval"
 if not eval_dir.exists():
-    eval_dir = Path("backend/models/eval")
-eval_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/static/eval", StaticFiles(directory=str(eval_dir)), name="eval_static")
+    eval_dir = Path("models/eval")
+try:
+    eval_dir.mkdir(parents=True, exist_ok=True)
+except OSError:
+    pass
+if eval_dir.exists():
+    app.mount("/static/eval", StaticFiles(directory=str(eval_dir)), name="eval_static")
 
 # Include API Routers under /api
 app.include_router(scan.router, prefix="/api")
