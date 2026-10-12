@@ -52,21 +52,20 @@ except OSError:
 if eval_dir.exists():
     app.mount("/static/eval", StaticFiles(directory=str(eval_dir)), name="eval_static")
 
-# Include API Routers under /api
-app.include_router(scan.router, prefix="/api")
-app.include_router(history.router, prefix="/api")
-app.include_router(system.router, prefix="/api")
-app.include_router(model.router, prefix="/api")
-app.include_router(report.router, prefix="/api")
+# Include API Routers under /api and root
+for prefix in ["/api", ""]:
+    app.include_router(scan.router, prefix=prefix)
+    app.include_router(history.router, prefix=prefix)
+    app.include_router(system.router, prefix=prefix)
+    app.include_router(model.router, prefix=prefix)
+    app.include_router(report.router, prefix=prefix)
 
 
-@app.get("/")
-@app.get("/app")
-def root():
+def _get_dashboard_response():
     index_file = Path(__file__).resolve().parent / "static" / "index.html"
     if index_file.exists():
-        from fastapi.responses import FileResponse
-        return FileResponse(str(index_file))
+        from fastapi.responses import HTMLResponse
+        return HTMLResponse(content=index_file.read_text(encoding="utf-8"), status_code=200)
     return {
         "service": "PHISHGUARD//NEXUS API",
         "status": "online",
@@ -74,6 +73,21 @@ def root():
         "docs": "/docs",
         "health": "/api/health"
     }
+
+
+@app.get("/")
+@app.get("/app")
+@app.get("/api")
+@app.get("/api/")
+@app.get("/api/index")
+@app.get("/api/index.py")
+def root():
+    return _get_dashboard_response()
+
+
+@app.get("/{full_path:path}")
+def catch_all_get(full_path: str):
+    return _get_dashboard_response()
 
 
 # Standard Error Envelope Handler
