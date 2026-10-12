@@ -85,9 +85,26 @@ def root():
     return _get_dashboard_response()
 
 
+@app.middleware("http")
+async def vercel_path_rewrite_middleware(request: Request, call_next):
+    matched = (
+        request.headers.get("x-matched-path")
+        or request.headers.get("x-forwarded-uri")
+        or request.headers.get("x-rewrite-url")
+    )
+    if matched:
+        clean_path = matched.split("?")[0]
+        if clean_path and not clean_path.startswith("/api/index"):
+            request.scope["path"] = clean_path
+    response = await call_next(request)
+    return response
+
+
 @app.get("/{full_path:path}")
 def catch_all_get(full_path: str):
-    return _get_dashboard_response()
+    if not full_path.startswith("api/") and not full_path.startswith("static/"):
+        return _get_dashboard_response()
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
 
 # Standard Error Envelope Handler
