@@ -1,0 +1,40 @@
+# Web & Async Framework
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.6.4
+pydantic-settings>=2.2.1
+sse-starlette>=2.0.0
+slowapi>=0.1.9
+python-multipart>=0.0.9
+
+# Machine Learning & Explainability
+scikit-learn>=1.4.0
+lightgbm>=4.3.0
+xgboost>=2.0.3
+shap>=0.45.0
+optuna>=3.6.0
+numpy>=1.26.4
+pandas>=2.2.1
+scipy>=1.12.0
+joblib>=1.3.2
+
+# Feature Extraction & NLP
+tldextract>=5.1.2
+Levenshtein>=0.25.0
+beautifulsoup4>=4.12.3
+
+# IBM watsonx.ai Integration
+ibm-watsonx-ai>=1.0.0
+
+# Database & ORM
+SQLAlchemy>=2.0.28
+
+# Reporting & PDF Generation
+reportlab>=4.1.0
+
+# Testing & Code Quality
+pytest>=8.1.1
+pytest-asyncio>=0.23.6
+httpx>=0.27.0
+ruff>=0.3.3
+black>=24.3.0

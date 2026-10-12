@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PHISHGUARD//NEXUS — Explainable AI Phishing Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#05060A',
+            surface: '#0D0F18',
+            surface2: '#131726',
+            border: '#1A2040',
+            cyan: '#00F0FF',
+            magenta: '#FF2BD6',
+            safe: '#39FF14',
+            suspicious: '#FFB800',
+            danger: '#FF2E4D',
+            text: '#E0E6FF',
+            muted: '#6B7BA4'
+          },
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            rajdhani: ['Rajdhani', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #05060A; color: #E0E6FF; font-family: 'Rajdhani', sans-serif; overflow-x: hidden; }
+    .scanline {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+    }
+    .neon-cyan { box-shadow: 0 0 15px rgba(0, 240, 255, 0.25); }
+    .neon-magenta { box-shadow: 0 0 15px rgba(255, 43, 214, 0.25); }
+    .neon-danger { box-shadow: 0 0 20px rgba(255, 46, 77, 0.35); }
+    .neon-safe { box-shadow: 0 0 20px rgba(57, 255, 20, 0.35); }
+    .hud-card {
+      position: relative;
+      background: #0D0F18;
+      border: 1px solid #1A2040;
+    }
+    .hud-card::before {
+      content: "┌";
+      position: absolute;
+      top: -4px;
+      left: -2px;
+      color: #00F0FF;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .hud-card::after {
+      content: "┘";
+      position: absolute;
+      bottom: -4px;
+      right: -2px;
+      color: #00F0FF;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .typewriter-cursor::after {
+      content: "█";
+      color: #00F0FF;
+      animation: blink 0.8s infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+  </style>
+</head>
+<body class="min-h-screen relative selection:bg-cyan selection:text-black">
+  <div class="fixed inset-0 scanline z-50 pointer-events-none"></div>
+
+  <!-- Boot Overlay -->
+  <div id="boot-overlay" class="fixed inset-0 bg-black z-50 flex flex-col justify-center items-center font-mono p-6 transition-opacity duration-700">
+    <div class="max-w-xl w-full text-green-400 space-y-2 text-sm md:text-base">
+      <div class="font-orbitron text-xl text-cyan tracking-wider font-bold mb-4">PHISHGUARD//NEXUS v1.0.0</div>
+      <div>INITIALIZING NEURAL SHIELD...</div>
+      <div id="boot-step-1">&gt; Loading calibrated threat model............. [OK]</div>
+      <div id="boot-step-2">&gt; Mounting lexical explainability engine...... [OK]</div>
+      <div id="boot-step-3">&gt; Connecting to IBM watsonx.ai Granite........ [<span class="text-cyan font-bold" id="watsonx-status">CONNECTING</span>]</div>
+      <div id="boot-step-4">&gt; Preparing real-time SSE telemetry........... [NOMINAL]</div>
+      <div class="mt-4 pt-4 border-t border-green-900 text-cyan animate-pulse font-bold cursor-pointer" onclick="dismissBoot()">
+        [ PRESS ANY KEY OR CLICK TO ENTER SYSTEM ]
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Navigation -->
+  <header class="border-b border-border bg-surface/80 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-3 h-3 bg-cyan rounded-full animate-ping"></div>
+        <span class="font-orbitron font-black text-xl tracking-widest text-white">
+          PHISHGUARD<span class="text-cyan">//</span><span class="text-magenta">NEXUS</span>
+        </span>
+        <span class="hidden md:inline-block px-2 py-0.5 text-xs font-mono bg-border rounded text-cyan border border-cyan/30">
+          IBM watsonx.ai Enabled
+        </span>
+      </div>
+
+      <nav class="flex space-x-2 md:space-x-4 font-mono text-sm">
+        <button onclick="switchTab('scan')" id="nav-scan" class="px-3 py-1.5 rounded text-cyan font-bold bg-border border border-cyan/50">SCAN</button>
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-3 py-1.5 rounded text-muted hover:text-white">DASHBOARD</button>
+        <button onclick="switchTab('model')" id="nav-model" class="px-3 py-1.5 rounded text-muted hover:text-white">MODEL LAB</button>
+        <button onclick="switchTab('settings')" id="nav-settings" class="px-3 py-1.5 rounded text-muted hover:text-white">SETTINGS</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+    <!-- TAB 1: SCAN CONSOLE -->
+    <div id="tab-scan" class="space-y-8">
+      <!-- Input Console -->
+      <section class="hud-card p-6 rounded-lg shadow-2xl">
+        <div class="flex items-center justify-between border-b border-border pb-4 mb-6">
+          <div class="flex space-x-2">
+            <button onclick="setInputMode('url')" id="mode-url" class="px-4 py-1 font-mono text-sm rounded bg-cyan text-black font-bold">URL SCAN</button>
+            <button onclick="setInputMode('email')" id="mode-email" class="px-4 py-1 font-mono text-sm rounded text-muted hover:text-white">EMAIL BODY</button>
+            <button onclick="setInputMode('sms')" id="mode-sms" class="px-4 py-1 font-mono text-sm rounded text-muted hover:text-white">SMS TEXT</button>
+          </div>
+          <span class="text-xs font-mono text-muted hidden sm:inline">PRIVACY-FIRST: MESSAGE TEXT NEVER STORED</span>
+        </div>
+
+        <div class="space-y-4">
+          <textarea id="target-input" rows="3" placeholder="Paste target URL here (e.g. http://paypa1.secure-verify.net/account/login?token=abc)"
+            class="w-full bg-black/60 border border-border rounded p-4 font-mono text-text focus:outline-none focus:border-cyan text-sm md:text-base"></textarea>
+
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex space-x-2 font-mono text-xs">
+              <button onclick="loadDemoPhish()" class="px-3 py-1.5 rounded bg-danger/20 border border-danger/40 text-danger hover:bg-danger/30 transition">DEMO: Phishing</button>
+              <button onclick="loadDemoSafe()" class="px-3 py-1.5 rounded bg-safe/20 border border-safe/40 text-safe hover:bg-safe/30 transition">DEMO: Safe</button>
+            </div>
+            <button onclick="executeScan()" id="btn-scan" class="px-6 py-2.5 bg-cyan text-black font-orbitron font-bold tracking-wider rounded neon-cyan hover:opacity-90 transition flex items-center space-x-2">
+              <span>ANALYZE THREAT</span>
+              <span id="scan-spinner" class="hidden">⚡</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Live SSE Pipeline -->
+        <div id="pipeline-container" class="hidden mt-8 pt-6 border-t border-border space-y-4">
+          <div class="flex justify-between items-center font-mono text-xs text-muted">
+            <span class="text-cyan font-bold tracking-wider">PIPELINE EXECUTION TELEMETRY</span>
+            <span id="pipeline-pct">0%</span>
+          </div>
+          <div class="w-full bg-black h-2 rounded overflow-hidden">
+            <div id="pipeline-bar" class="bg-gradient-to-r from-cyan to-magenta h-full w-0 transition-all duration-300"></div>
+          </div>
+          <div id="pipeline-status" class="font-mono text-xs text-cyan tracking-wide">Initializing scan...</div>
+        </div>
+      </section>
+
+      <!-- Results Grid (Hidden until scan completed) -->
+      <div id="results-section" class="hidden space-y-8">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          <!-- Left Col: Threat Gauge & URL Anatomy -->
+          <div class="lg:col-span-5 space-y-6">
+            <!-- Threat Gauge -->
+            <div class="hud-card p-6 rounded-lg text-center space-y-4">
+              <div class="font-orbitron text-xs tracking-widest text-muted">THREAT CLASSIFICATION LEVEL</div>
+              
+              <div class="relative w-48 h-48 mx-auto flex items-center justify-center">
+                <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" stroke="#1A2040" stroke-width="8" fill="transparent"/>
+                  <circle id="gauge-circle" cx="50" cy="50" r="40" stroke="#00F0FF" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="251.2" stroke-linecap="round" fill="transparent" class="transition-all duration-1000 ease-out"/>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center font-orbitron">
+                  <span id="gauge-percent" class="text-3xl font-black text-white">0%</span>
+                  <span id="gauge-label" class="text-xs font-mono tracking-widest text-muted">CALIBRATED</span>
+                </div>
+              </div>
+
+              <div id="verdict-banner" class="px-4 py-2 font-orbitron font-black text-lg tracking-widest rounded border uppercase">
+                ANALYZING
+              </div>
+            </div>
+
+            <!-- URL Anatomy -->
+            <div id="anatomy-card" class="hud-card p-6 rounded-lg space-y-4">
+              <div class="font-orbitron text-xs tracking-widest text-cyan">URL STRUCTURAL ANATOMY</div>
+              <div id="anatomy-tokens" class="font-mono text-sm break-all space-y-2 bg-black/60 p-3 rounded border border-border">
+                <!-- Tokens populated via JS -->
+              </div>
+              <div id="red-flags-list" class="space-y-1 text-xs font-mono text-danger">
+                <!-- Red flags list -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Col: Explainability & AI Analyst -->
+          <div class="lg:col-span-7 space-y-6">
+            <!-- SHAP Explainability -->
+            <div class="hud-card p-6 rounded-lg space-y-4">
+              <div class="flex justify-between items-center">
+                <div class="font-orbitron text-xs tracking-widest text-cyan">FEATURE INFLUENCE (SHAP EXPLANATION)</div>
+                <span class="text-xs font-mono text-muted">Log-Odds Contribution</span>
+              </div>
+              <div id="shap-bars" class="space-y-3 font-mono text-xs">
+                <!-- Populated via JS -->
+              </div>
+            </div>
+
+            <!-- AI Analyst Panel -->
+            <div class="hud-card p-6 rounded-lg space-y-4 border-l-4 border-l-cyan">
+              <div class="flex items-center justify-between border-b border-border pb-3">
+                <div class="flex items-center space-x-2">
+                  <span class="font-orbitron text-sm font-bold text-white">AI SECURITY ANALYST</span>
+                  <span id="ai-badge" class="px-2 py-0.5 text-xs font-mono bg-cyan/10 text-cyan border border-cyan/30 rounded">IBM watsonx.ai</span>
+                </div>
+                <!-- Language Toggle -->
+                <div class="flex space-x-1 font-mono text-xs">
+                  <button onclick="translateExplanation('en')" id="lang-en" class="px-2 py-1 rounded bg-cyan text-black font-bold">EN</button>
+                  <button onclick="translateExplanation('hi')" id="lang-hi" class="px-2 py-1 rounded text-muted hover:text-white">हिन्दी</button>
+                  <button onclick="translateExplanation('pa')" id="lang-pa" class="px-2 py-1 rounded text-muted hover:text-white">ਪੰਜਾਬੀ</button>
+                </div>
+              </div>
+
+              <div class="font-mono text-sm leading-relaxed text-text">
+                <p id="ai-text" class="typewriter-cursor">Awaiting scan submission...</p>
+              </div>
+
+              <div class="pt-3 border-t border-border space-y-2 text-xs font-mono">
+                <div class="text-cyan font-bold">RECOMMENDED INCIDENT RESPONSE:</div>
+                <div id="ai-action" class="text-muted">Awaiting recommendations...</div>
+                <div class="pt-2 text-muted flex items-center justify-between">
+                  <span>Helpline: <b class="text-danger">1930</b> | Portal: <a href="https://cybercrime.gov.in" target="_blank" class="text-cyan underline">cybercrime.gov.in</a></span>
+                  <button onclick="downloadPdf()" class="px-3 py-1 bg-surface2 border border-cyan/40 text-cyan rounded hover:bg-cyan/10 transition">
+                    ⬇ EXPORT PDF
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: DASHBOARD -->
+    <div id="tab-dashboard" class="hidden space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="hud-card p-4 rounded text-center">
+          <div class="text-xs font-mono text-muted">TOTAL SCANS</div>
+          <div id="stat-total" class="font-orbitron text-2xl font-bold text-white mt-1">0</div>
+        </div>
+        <div class="hud-card p-4 rounded text-center border-b-2 border-danger">
+          <div class="text-xs font-mono text-muted">PHISHING CAUGHT</div>
+          <div id="stat-phishing" class="font-orbitron text-2xl font-bold text-danger mt-1">0</div>
+        </div>
+        <div class="hud-card p-4 rounded text-center border-b-2 border-suspicious">
+          <div class="text-xs font-mono text-muted">SUSPICIOUS</div>
+          <div id="stat-suspicious" class="font-orbitron text-2xl font-bold text-suspicious mt-1">0</div>
+        </div>
+        <div class="hud-card p-4 rounded text-center border-b-2 border-safe">
+          <div class="text-xs font-mono text-muted">SAFE VERDICTS</div>
+          <div id="stat-safe" class="font-orbitron text-2xl font-bold text-safe mt-1">0</div>
+        </div>
+      </div>
+
+      <div class="hud-card p-6 rounded-lg space-y-4">
+        <div class="flex justify-between items-center">
+          <div class="font-orbitron text-sm font-bold text-white">HISTORICAL SCAN INCIDENTS</div>
+          <input type="text" id="history-search" placeholder="Filter domain..." oninput="loadHistory()"
+            class="bg-black border border-border rounded px-3 py-1 font-mono text-xs text-text focus:outline-none focus:border-cyan">
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left font-mono text-xs">
+            <thead>
+              <tr class="border-b border-border text-muted">
+                <th class="py-2">TARGET / DOMAIN</th>
+                <th>TYPE</th>
+                <th>VERDICT</th>
+                <th>SCORE</th>
+                <th>TIMESTAMP</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body" class="divide-y divide-border/40">
+              <tr><td colspan="5" class="py-4 text-center text-muted">No historical scans recorded.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: MODEL LAB -->
+    <div id="tab-model" class="hidden space-y-6">
+      <div class="hud-card p-6 rounded-lg space-y-6">
+        <div class="flex justify-between items-center border-b border-border pb-4">
+          <div>
+            <div class="font-orbitron text-lg font-bold text-white">MODEL LAB & TRANSPARENCY BENCHMARK</div>
+            <div class="text-xs font-mono text-muted">Verified Phase 3 evaluation artifacts (No invented metrics)</div>
+          </div>
+          <span id="model-champion-badge" class="px-3 py-1 font-mono text-xs rounded bg-cyan/10 text-cyan border border-cyan/40">Champion: Logistic Regression</span>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 font-mono text-center">
+          <div class="bg-black/40 p-3 rounded border border-border">
+            <div class="text-xs text-muted">F2 SCORE</div>
+            <div id="metric-f2" class="text-lg font-bold text-cyan mt-1">—</div>
+          </div>
+          <div class="bg-black/40 p-3 rounded border border-border">
+            <div class="text-xs text-muted">ROC-AUC</div>
+            <div id="metric-roc" class="text-lg font-bold text-white mt-1">—</div>
+          </div>
+          <div class="bg-black/40 p-3 rounded border border-border">
+            <div class="text-xs text-muted">PR-AUC</div>
+            <div id="metric-pr" class="text-lg font-bold text-magenta mt-1">—</div>
+          </div>
+          <div class="bg-black/40 p-3 rounded border border-border">
+            <div class="text-xs text-muted">PRECISION</div>
+            <div id="metric-precision" class="text-lg font-bold text-white mt-1">—</div>
+          </div>
+          <div class="bg-black/40 p-3 rounded border border-border">
+            <div class="text-xs text-muted">RECALL</div>
+            <div id="metric-recall" class="text-lg font-bold text-safe mt-1">—</div>
+          </div>
+          <div class="bg-black/40 p-3 rounded border border-border">
+            <div class="text-xs text-muted">LATENCY p95</div>
+            <div id="metric-latency" class="text-lg font-bold text-white mt-1">— ms</div>
+          </div>
+        </div>
+
+        <!-- Generated Plots Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+          <div class="hud-card p-4 rounded space-y-2">
+            <div class="font-mono text-xs text-cyan">ROC CURVE (HOLD-OUT TEST SPLIT)</div>
+            <img src="/static/eval/roc_curve.png" alt="ROC Curve" class="w-full rounded border border-border" onerror="this.src=''">
+          </div>
+          <div class="hud-card p-4 rounded space-y-2">
+            <div class="font-mono text-xs text-magenta">PRECISION-RECALL CURVE</div>
+            <img src="/static/eval/pr_curve.png" alt="PR Curve" class="w-full rounded border border-border" onerror="this.src=''">
+          </div>
+          <div class="hud-card p-4 rounded space-y-2">
+            <div class="font-mono text-xs text-safe">CONFUSION MATRIX</div>
+            <img src="/static/eval/confusion_matrix.png" alt="Confusion Matrix" class="w-full rounded border border-border" onerror="this.src=''">
+          </div>
+          <div class="hud-card p-4 rounded space-y-2">
+            <div class="font-mono text-xs text-cyan">RELIABILITY CALIBRATION DIAGRAM</div>
+            <img src="/static/eval/calibration_curve.png" alt="Calibration Curve" class="w-full rounded border border-border" onerror="this.src=''">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: SETTINGS -->
+    <div id="tab-settings" class="hidden space-y-6">
+      <div class="hud-card p-6 rounded-lg max-w-2xl space-y-6 font-mono text-sm">
+        <div class="font-orbitron text-lg font-bold text-white border-b border-border pb-3">SYSTEM CONFIGURATION</div>
+        <div class="space-y-4">
+          <div>
+            <div class="text-white font-bold">Detection Sensitivity Thresholds</div>
+            <div class="text-muted text-xs">Safe Threshold: 0.35 | Suspicious Threshold: 0.70</div>
+          </div>
+          <div>
+            <div class="text-white font-bold">Reporting Authority Routing</div>
+            <div class="text-muted text-xs">Default Region: India (Helpline 1930 / cybercrime.gov.in)</div>
+          </div>
+          <div class="pt-4 border-t border-border">
+            <div class="text-white font-bold mb-2">Privacy & Local Database</div>
+            <button onclick="purgeHistory()" class="px-4 py-2 bg-danger/20 border border-danger text-danger rounded hover:bg-danger/30 transition">
+              PURGE SCAN HISTORY
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let currentMode = 'url';
+    let activeScanId = null;
+    let cachedScanResult = null;
+
+    // Boot Sequence
+    async function initBoot() {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        document.getElementById('watsonx-status').innerText = data.components.watsonx_ai === 'ready' ? 'ONLINE' : 'FALLBACK';
+      } catch (e) {
+        document.getElementById('watsonx-status').innerText = 'OFFLINE';
+      }
+      setTimeout(dismissBoot, 2200);
+    }
+    function dismissBoot() {
+      const el = document.getElementById('boot-overlay');
+      if (el) {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 700);
+      }
+    }
+    window.addEventListener('load', initBoot);
+
+    function switchTab(tab) {
+      ['scan', 'dashboard', 'model', 'settings'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        document.getElementById(`nav-${t}`).className = 'px-3 py-1.5 rounded text-muted hover:text-white font-mono text-sm';
+      });
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+      document.getElementById(`nav-${tab}`).className = 'px-3 py-1.5 rounded text-cyan font-bold bg-border border border-cyan/50 font-mono text-sm';
+
+      if (tab === 'dashboard') loadHistory();
+      if (tab === 'model') loadModelMetrics();
+    }
+
+    function setInputMode(mode) {
+      currentMode = mode;
+      ['url', 'email', 'sms'].forEach(m => {
+        document.getElementById(`mode-${m}`).className = 'px-4 py-1 font-mono text-sm rounded text-muted hover:text-white';
+      });
+      document.getElementById(`mode-${mode}`).className = 'px-4 py-1 font-mono text-sm rounded bg-cyan text-black font-bold';
+      const placeholder = mode === 'url' ? 'Paste target URL here...' :
+                          mode === 'email' ? 'Paste raw email body text or headers here...' :
+                          'Paste incoming SMS text message here...';
+      document.getElementById('target-input').placeholder = placeholder;
+    }
+
+    function loadDemoPhish() {
+      setInputMode('url');
+      document.getElementById('target-input').value = 'http://paypa1.secure-verify.net/account/login?token=4892';
+    }
+
+    function loadDemoSafe() {
+      setInputMode('url');
+      document.getElementById('target-input').value = 'https://www.google.com/search?q=cybersecurity+best+practices';
+    }
+
+    async function executeScan() {
+      const content = document.getElementById('target-input').value.trim();
+      if (!content) return;
+
+      document.getElementById('btn-scan').disabled = true;
+      document.getElementById('scan-spinner').classList.remove('hidden');
+      document.getElementById('pipeline-container').classList.remove('hidden');
+      document.getElementById('results-section').classList.add('hidden');
+      updatePipeline(10, 'Submitting scan request...');
+
+      try {
+        const res = await fetch('/api/scan', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ type: currentMode, content: content })
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.detail || 'Scan failed');
+          resetBtn();
+          return;
+        }
+
+        const data = await res.json();
+        activeScanId = data.scan_id;
+        subscribeSSE(data.stream_url, data.scan_id);
+      } catch (e) {
+        alert('Network connection error: ' + e.message);
+        resetBtn();
+      }
+    }
+
+    function subscribeSSE(streamUrl, scanId) {
+      const eventSource = new EventSource(streamUrl);
+
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          updatePipeline(payload.pct, payload.detail);
+
+          if (payload.stage === 'done') {
+            eventSource.close();
+            fetchFinalResult(scanId);
+          }
+        } catch (e) {}
+      };
+
+      eventSource.onerror = () => {
+        eventSource.close();
+        fetchFinalResult(scanId);
+      };
+    }
+
+    function updatePipeline(pct, status) {
+      document.getElementById('pipeline-bar').style.width = pct + '%';
+      document.getElementById('pipeline-pct').innerText = pct + '%';
+      document.getElementById('pipeline-status').innerText = status;
+    }
+
+    function resetBtn() {
+      document.getElementById('btn-scan').disabled = false;
+      document.getElementById('scan-spinner').classList.add('hidden');
+    }
+
+    async function fetchFinalResult(scanId) {
+      try {
+        const res = await fetch(`/api/scan/${scanId}`);
+        const data = await res.json();
+        cachedScanResult = data;
+        renderResults(data);
+      } finally {
+        resetBtn();
+      }
+    }
+
+    function renderResults(data) {
+      document.getElementById('results-section').classList.remove('hidden');
+
+      // Threat Gauge
+      const pct = Math.round(data.probability * 100);
+      document.getElementById('gauge-percent').innerText = pct + '%';
+      const offset = 251.2 - (251.2 * (pct / 100));
+      const circle = document.getElementById('gauge-circle');
+      circle.style.strokeDashoffset = offset;
+
+      const banner = document.getElementById('verdict-banner');
+      banner.innerText = data.verdict;
+
+      if (data.verdict === 'PHISHING') {
+        circle.style.stroke = '#FF2E4D';
+        banner.className = 'px-4 py-2 font-orbitron font-black text-lg tracking-widest rounded border border-danger text-danger bg-danger/10 neon-danger';
+      } else if (data.verdict === 'SUSPICIOUS') {
+        circle.style.stroke = '#FFB800';
+        banner.className = 'px-4 py-2 font-orbitron font-black text-lg tracking-widest rounded border border-suspicious text-suspicious bg-suspicious/10';
+      } else {
+        circle.style.stroke = '#39FF14';
+        banner.className = 'px-4 py-2 font-orbitron font-black text-lg tracking-widest rounded border border-safe text-safe bg-safe/10 neon-safe';
+      }
+
+      // Anatomy & Red flags
+      const tokensDiv = document.getElementById('anatomy-tokens');
+      tokensDiv.innerHTML = `<span class="text-cyan">Target:</span> ${data.target}`;
+      if (data.url_anatomy) {
+        const a = data.url_anatomy;
+        tokensDiv.innerHTML = `
+          <div><span class="text-muted">Protocol:</span> <span class="${a.protocol === 'https' ? 'text-safe' : 'text-danger font-bold'}">${a.protocol}://</span></div>
+          <div><span class="text-muted">Subdomain:</span> <span class="text-magenta font-bold">${a.subdomain || '(none)'}</span></div>
+          <div><span class="text-muted">Domain:</span> <span class="text-cyan font-bold">${a.domain}${a.tld}</span></div>
+          <div><span class="text-muted">Path:</span> <span class="text-text">${a.path || '/'}</span></div>
+        `;
+      }
+
+      const flagsList = document.getElementById('red-flags-list');
+      flagsList.innerHTML = (data.red_flags || []).map(rf => `<div>⚠️ ${rf}</div>`).join('');
+
+      // SHAP contributions
+      const shapDiv = document.getElementById('shap-bars');
+      shapDiv.innerHTML = (data.shap_contributions || []).map(s => {
+        const isPhish = s.direction === 'phishing';
+        const color = isPhish ? 'bg-danger text-danger' : 'bg-safe text-safe';
+        const width = Math.min(100, Math.max(10, Math.abs(s.value) * 180));
+        return `
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span>${s.feature}</span>
+              <span class="${isPhish ? 'text-danger' : 'text-safe'}">${s.value > 0 ? '+' : ''}${s.value} → ${s.direction.toUpperCase()}</span>
+            </div>
+            <div class="w-full bg-black h-2 rounded overflow-hidden">
+              <div class="${isPhish ? 'bg-gradient-to-r from-magenta to-danger' : 'bg-safe'} h-full rounded" style="width: ${width}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // AI Analyst
+      document.getElementById('ai-text').innerText = data.explanation.en;
+      document.getElementById('ai-action').innerText = data.explanation.what_to_do;
+      document.getElementById('ai-badge').innerText = data.explanation.powered_by === 'watsonx' ? 'IBM watsonx.ai Granite' : 'Offline Template Engine';
+    }
+
+    async function translateExplanation(lang) {
+      if (!cachedScanResult) return;
+      ['en', 'hi', 'pa'].forEach(l => {
+        document.getElementById(`lang-${l}`).className = 'px-2 py-1 rounded text-muted hover:text-white';
+      });
+      document.getElementById(`lang-${lang}`).className = 'px-2 py-1 rounded bg-cyan text-black font-bold';
+
+      if (lang === 'en') {
+        document.getElementById('ai-text').innerText = cachedScanResult.explanation.en;
+        document.getElementById('ai-action').innerText = cachedScanResult.explanation.what_to_do;
+        return;
+      }
+
+      document.getElementById('ai-text').innerText = 'Translating advisory...';
+      try {
+        const res = await fetch('/api/translate', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ scan_id: cachedScanResult.scan_id, target_language: lang })
+        });
+        const data = await res.json();
+        document.getElementById('ai-text').innerText = data.translated_explanation;
+        document.getElementById('ai-action').innerText = data.what_to_do;
+      } catch (e) {
+        document.getElementById('ai-text').innerText = 'Translation failed.';
+      }
+    }
+
+    function downloadPdf() {
+      if (!cachedScanResult) return;
+      window.location.href = `/api/report?scan_id=${cachedScanResult.scan_id}`;
+    }
+
+    async function loadHistory() {
+      const q = document.getElementById('history-search')?.value || '';
+      try {
+        const res = await fetch(`/api/history?limit=15&q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        const tbody = document.getElementById('history-table-body');
+        if (!data.items || data.items.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="py-4 text-center text-muted">No scan records found.</td></tr>';
+        } else {
+          tbody.innerHTML = data.items.map(it => `
+            <tr class="hover:bg-surface2 transition">
+              <td class="py-2.5 font-bold text-white">${it.target}</td>
+              <td class="text-cyan uppercase">${it.type}</td>
+              <td><span class="px-2 py-0.5 rounded text-xs font-bold ${it.verdict === 'PHISHING' ? 'bg-danger/20 text-danger' : it.verdict === 'SUSPICIOUS' ? 'bg-suspicious/20 text-suspicious' : 'bg-safe/20 text-safe'}">${it.verdict}</span></td>
+              <td>${Math.round(it.probability * 100)}%</td>
+              <td class="text-muted">${it.created_at.replace('T', ' ').substring(0, 19)}</td>
+            </tr>
+          `).join('');
+        }
+
+        // Stats
+        const statsRes = await fetch('/api/stats');
+        const stats = await statsRes.json();
+        document.getElementById('stat-total').innerText = stats.total_scans;
+        document.getElementById('stat-phishing').innerText = stats.phishing_count;
+        document.getElementById('stat-suspicious').innerText = stats.suspicious_count;
+        document.getElementById('stat-safe').innerText = stats.safe_count;
+      } catch (e) {}
+    }
+
+    async function purgeHistory() {
+      if (!confirm('Purge all historical scan records from SQLite?')) return;
+      await fetch('/api/history', { method: 'DELETE' });
+      alert('History purged.');
+      loadHistory();
+    }
+
+    async function loadModelMetrics() {
+      try {
+        const res = await fetch('/api/model/metrics');
+        const m = await res.json();
+        document.getElementById('model-champion-badge').innerText = `Champion: ${m.model_name}`;
+        document.getElementById('metric-f2').innerText = m.f2 !== null ? m.f2 : '—';
+        document.getElementById('metric-roc').innerText = m.roc_auc !== null ? m.roc_auc : '—';
+        document.getElementById('metric-pr').innerText = m.pr_auc !== null ? m.pr_auc : '—';
+        document.getElementById('metric-precision').innerText = m.precision !== null ? m.precision : '—';
+        document.getElementById('metric-recall').innerText = m.recall !== null ? m.recall : '—';
+        document.getElementById('metric-latency').innerText = (m.inference_latency_ms?.p95 !== null ? m.inference_latency_ms.p95 : '—') + ' ms';
+      } catch (e) {}
+    }
+  </script>
+</body>
+</html>

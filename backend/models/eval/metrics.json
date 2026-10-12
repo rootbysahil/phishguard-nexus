@@ -1,0 +1,52 @@
+{
+  "model_name": "Logistic Regression",
+  "trained_at": "2026-10-12T18:26:06.487903+00:00",
+  "dataset_split": {
+    "train": 2361,
+    "val": 179,
+    "test": 460
+  },
+  "threshold": 0.1,
+  "precision": 0.9946,
+  "recall": 1.0,
+  "f1": 0.9973,
+  "f2": 0.9989,
+  "f2_95_ci": [
+    0.9972,
+    1.0
+  ],
+  "roc_auc": 1.0,
+  "roc_auc_95_ci": [
+    1.0,
+    1.0
+  ],
+  "pr_auc": 1.0,
+  "ece": 0.166,
+  "inference_latency_ms": {
+    "p50": 1.87,
+    "p95": 2.69
+  },
+  "confusion_matrix": [
+    [
+      93,
+      2
+    ],
+    [
+      0,
+      365
+    ]
+  ],
+  "plot_paths": {
+    "roc_curve": "/static/eval/roc_curve.png",
+    "pr_curve": "/static/eval/pr_curve.png",
+    "confusion_matrix": "/static/eval/confusion_matrix.png",
+    "calibration_curve": "/static/eval/calibration_curve.png",
+    "shap_global": "/static/eval/shap_global.png"
+  },
+  "fresh_url_eval": {
+    "f2": 0.9789,
+    "roc_auc": 0.99,
+    "sample_size": 500,
+    "note": "Evaluated on held-out post-cutoff feed"
+  }
+}
