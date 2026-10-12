@@ -77,11 +77,19 @@ def _get_dashboard_response():
 
 @app.get("/")
 @app.get("/app")
-@app.get("/api")
-@app.get("/api/")
-@app.get("/api/index")
-@app.get("/api/index.py")
-def root():
+def root_get():
+    return _get_dashboard_response()
+
+
+@app.api_route("/api/index", methods=["GET", "POST", "OPTIONS"])
+@app.api_route("/api/index.py", methods=["GET", "POST", "OPTIONS"])
+async def root_index(request: Request):
+    if request.method == "POST":
+        return JSONResponse(content={
+            "debug": True,
+            "scope_path": request.scope.get("path"),
+            "headers": dict(request.headers)
+        })
     return _get_dashboard_response()
 
 
