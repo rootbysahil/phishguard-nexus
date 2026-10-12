@@ -10,8 +10,11 @@ from backend.app.db.models import Base
 
 # Ensure SQLite parent directory exists
 if settings.DATABASE_URL.startswith("sqlite"):
-    db_path = settings.DATABASE_URL.replace("sqlite:///", "")
-    Path(db_path).resolve().parent.mkdir(parents=True, exist_ok=True)
+    try:
+        db_path = settings.DATABASE_URL.replace("sqlite:///", "")
+        Path(db_path).resolve().parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
 
 engine = create_engine(
     settings.DATABASE_URL,
