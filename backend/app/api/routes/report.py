@@ -1,12 +1,13 @@
 """
 PHISHGUARD//NEXUS - Incident Report PDF Generation
-POST /api/report
+Supports both GET /api/report?scan_id=... and POST /api/report
 """
 
 import io
 import json
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, Response
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from reportlab.lib.pagesizes import letter
@@ -24,9 +25,8 @@ class ReportRequest(BaseModel):
     scan_id: str
 
 
-@router.post("/report")
-def generate_report(req: ReportRequest, db: Session = Depends(get_db)):
-    record = db.query(ScanRecord).filter(ScanRecord.id == req.scan_id).first()
+def _build_pdf_response(scan_id: str, db: Session) -> Response:
+    record = db.query(ScanRecord).filter(ScanRecord.id == scan_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Scan record not found")
 
@@ -79,7 +79,11 @@ def generate_report(req: ReportRequest, db: Session = Depends(get_db)):
 
     # Red Flags
     elements.append(Paragraph("<b>Identified Red Flags & Behavioral Anomaly Markers:</b>", styles["Heading3"]))
-    red_flags = json.loads(record.red_flags_json)
+    try:
+        red_flags = json.loads(record.red_flags_json)
+    except Exception:
+        red_flags = []
+
     if red_flags:
         for rf in red_flags:
             elements.append(Paragraph(f"• {rf}", styles["Normal"]))
@@ -89,7 +93,11 @@ def generate_report(req: ReportRequest, db: Session = Depends(get_db)):
 
     # AI Advisory
     elements.append(Paragraph("<b>AI Security Analyst Advisory (Powered by IBM watsonx.ai):</b>", styles["Heading3"]))
-    expl = json.loads(record.explanation_json)
+    try:
+        expl = json.loads(record.explanation_json)
+    except Exception:
+        expl = {}
+
     elements.append(Paragraph(expl.get("en", "No advisory available."), styles["Normal"]))
     elements.append(Spacer(1, 10))
     elements.append(Paragraph(f"<b>Recommended Action:</b> {expl.get('what_to_do', 'N/A')}", styles["Normal"]))
@@ -103,3 +111,13 @@ def generate_report(req: ReportRequest, db: Session = Depends(get_db)):
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=phishguard-report-{record.id}.pdf"}
     )
+
+
+@router.get("/report")
+def generate_report_get(scan_id: str = Query(..., description="UUID of the scan"), db: Session = Depends(get_db)):
+    return _build_pdf_response(scan_id, db)
+
+
+@router.post("/report")
+def generate_report_post(req: ReportRequest, db: Session = Depends(get_db)):
+    return _build_pdf_response(req.scan_id, db)
