@@ -7,6 +7,7 @@ from typing import List, Union
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 import json
+import os
 
 
 class Settings(BaseSettings):
@@ -32,8 +33,12 @@ class Settings(BaseSettings):
                 return [orig.strip() for orig in v.split(",") if orig.strip()]
         return v
 
-    # Database
-    DATABASE_URL: str = "sqlite:///./app.db"
+    # Database (uses /tmp on Vercel serverless environment)
+    DATABASE_URL: str = (
+        "sqlite:////tmp/app.db"
+        if os.environ.get("VERCEL")
+        else "sqlite:///./app.db"
+    )
 
     # ML Model & Thresholds
     MODEL_PATH: str = "models/best_model.joblib"

@@ -29,20 +29,21 @@ class Predictor:
         self._load_model()
 
     def _load_model(self):
-        model_file = Path(settings.MODEL_PATH)
-        if not model_file.exists():
-            # Check backend/models as alternative path
-            alt = Path("backend") / settings.MODEL_PATH
-            if alt.exists():
-                model_file = alt
-
-        if model_file.exists():
-            try:
-                self.model = joblib.load(model_file)
-            except Exception:
-                self.model = None
-        else:
-            self.model = None
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        possible_paths = [
+            Path(settings.MODEL_PATH),
+            project_root / settings.MODEL_PATH,
+            project_root / "backend" / "models" / "best_model.joblib",
+            project_root / "models" / "best_model.joblib"
+        ]
+        for p in possible_paths:
+            if p.exists():
+                try:
+                    self.model = joblib.load(p)
+                    return
+                except Exception:
+                    pass
+        self.model = None
 
     def predict_url(self, url: str) -> Dict[str, Any]:
         """
