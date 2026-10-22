@@ -122,6 +122,6 @@ pytest backend/tests/ -v
 ## 7. Author & Internship Details
 
 - **Project**: PHISHGUARD//NEXUS
-- **Internship**: IBM Machine Learning & Artificial Intelligence Internship
-- **Student**: Sahil
+- **Internship Title**: Machine Learning and Applied AI Internship 2026
+- **Student Name**: Sahil Rai
 - **Core Technologies**: Machine Learning, Python, FastAPI, Scikit-Learn, SHAP, IBM watsonx.ai Granite, SQLite, ReportLab
